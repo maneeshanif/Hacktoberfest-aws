@@ -42,7 +42,7 @@ const en = {
     textLabel: "Message text",
     pickImage: "Choose image",
     paste: "Paste",
-    pasteHint: "You can also press Ctrl+V anywhere on the page, or drag an image in.",
+    pasteHint: "Press Ctrl+V anywhere on the page, drag an image in, or tap Speak and say what the message said.",
     removeImage: "Remove image",
     imageAlt: "The image you added",
     questionLabel: "Your question (optional)",
@@ -62,9 +62,19 @@ const en = {
   },
   family: { send: "Warn my family", copied: "Copied ✓", whatsapp: "Send on WhatsApp" },
   speak: { start: "Listen", stop: "Stop" },
+  voice: {
+    start: "Speak",
+    stop: "Stop",
+    listening: "Listening… say what the message said.",
+    privacy: "Voice typing uses your browser's speech service, so your audio may be processed by the browser maker.",
+    denied: "Microphone access is blocked. Allow it in your browser's site settings and try again.",
+    noSpeech: "Didn't hear anything. Try again, closer to the microphone.",
+    failed: "Voice typing didn't work. You can type or paste instead.",
+  },
   alert: {
     title: "This looks like a scam. Don't share any code or PIN.",
     dismiss: "I understand",
+    listen: "Listen",
   },
   flagLabels: {
     asks_otp_pin_cnic_card: "Asks for a code, PIN or ID number",
@@ -108,6 +118,10 @@ const en = {
       {
         q: "What happens if the checker is down?",
         a: "You'll see a note telling you to treat the message as suspicious. It never shows “safe” by default.",
+      },
+      {
+        q: "Is voice typing private?",
+        a: "Voice typing is optional and uses your browser's built-in speech recognition. In Chrome and Edge that audio can be processed by the browser maker's servers. For a fully on-device check, type, paste or add a screenshot instead.",
       },
       {
         q: "Which languages does it support?",
@@ -155,7 +169,7 @@ const ur: Strings = {
     textLabel: "پیغام کا متن",
     pickImage: "تصویر چنیں",
     paste: "پیسٹ",
-    pasteHint: "صفحے پر کہیں بھی Ctrl+V دبا سکتے ہیں، یا تصویر کھینچ کر لائیں۔",
+    pasteHint: "صفحے پر کہیں بھی Ctrl+V دبائیں، تصویر کھینچ کر لائیں، یا بول کر لکھیں پر ٹیپ کر کے پیغام بولیں۔",
     removeImage: "تصویر ہٹائیں",
     imageAlt: "آپ کی لگائی ہوئی تصویر",
     questionLabel: "آپ کا سوال (اختیاری)",
@@ -175,7 +189,16 @@ const ur: Strings = {
   },
   family: { send: "گھر والوں کو بھیجیں", copied: "کاپی ہو گیا ✓", whatsapp: "واٹس ایپ پر بھیجیں" },
   speak: { start: "سن لیں", stop: "روکیں" },
-  alert: { title: "یہ دھوکا ہو سکتا ہے! کسی کو کوڈ یا پن مت بتائیں۔", dismiss: "سمجھ گیا" },
+  voice: {
+    start: "بول کر لکھیں",
+    stop: "روکیں",
+    listening: "سن رہا ہوں… پیغام میں جو لکھا تھا وہ بولیں۔",
+    privacy: "آواز سے لکھنے کے لیے آپ کے براؤزر کی سروس استعمال ہوتی ہے، اس لیے آپ کی آواز براؤزر بنانے والی کمپنی تک جا سکتی ہے۔",
+    denied: "مائیکروفون کی اجازت بند ہے۔ براؤزر کی سیٹنگ میں اجازت دے کر دوبارہ کوشش کریں۔",
+    noSpeech: "کوئی آواز نہیں آئی۔ مائیکروفون کے قریب آ کر دوبارہ کوشش کریں۔",
+    failed: "آواز سے لکھنا کام نہیں کیا۔ آپ ٹائپ یا پیسٹ کر سکتے ہیں۔",
+  },
+  alert: { title: "یہ دھوکا ہو سکتا ہے! کسی کو کوڈ یا پن مت بتائیں۔", dismiss: "سمجھ گیا", listen: "سن لیں" },
   flagLabels: {
     asks_otp_pin_cnic_card: "کوڈ، پن یا شناختی کارڈ مانگتا ہے",
     urgency_threat: "جلدی یا دھمکی",
@@ -218,6 +241,10 @@ const ur: Strings = {
       {
         q: "اگر چیک کرنے والا نظام بند ہو تو؟",
         a: "آپ کو بتایا جائے گا کہ پیغام کو مشکوک سمجھیں۔ یہ کبھی خود بخود “محفوظ” نہیں دکھاتی۔",
+      },
+      {
+        q: "کیا آواز سے لکھنا نجی ہے؟",
+        a: "آواز سے لکھنا اختیاری ہے اور آپ کے براؤزر کی اپنی آواز پہچان استعمال کرتا ہے۔ کروم اور ایج میں یہ آواز براؤزر بنانے والی کمپنی کے سرور پر پروسیس ہو سکتی ہے۔ مکمل طور پر اپنے کمپیوٹر پر چیک کے لیے ٹائپ، پیسٹ یا اسکرین شاٹ استعمال کریں۔",
       },
       { q: "کون سی زبانیں ہیں؟", a: "صفحہ اور وضاحتیں انگریزی اور اردو میں ہیں۔ اوپر زبان کا بٹن استعمال کریں۔" },
     ],

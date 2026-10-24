@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalyzeInput } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { ClipboardIcon, CloseIcon, ImageIcon } from "./Icons";
+import MicButton from "./MicButton";
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -171,6 +172,7 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
             <ClipboardIcon width={20} height={20} />
             {u.paste}
           </button>
+          <MicButton value={text} onChange={setText} />
           <span className="w-full text-[14px] text-muted sm:ms-2 sm:w-auto">{u.pasteHint}</span>
         </div>
       </div>
@@ -181,14 +183,17 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
         </p>
       )}
 
-      <input
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        dir="auto"
-        aria-label={u.questionLabel}
-        placeholder={u.questionPlaceholder}
-        className="min-h-14 w-full rounded-2xl border-2 border-line bg-paper px-4 outline-none placeholder:text-muted/80 focus:border-blue"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          dir="auto"
+          aria-label={u.questionLabel}
+          placeholder={u.questionPlaceholder}
+          className="min-h-14 min-w-0 flex-1 rounded-2xl border-2 border-line bg-paper px-4 outline-none placeholder:text-muted/80 focus:border-blue"
+        />
+        <MicButton value={question} onChange={setQuestion} compact />
+      </div>
 
       <button type="submit" className="btn btn-primary w-full !min-h-14 text-[18px]" disabled={!canSubmit}>
         {u.submit}

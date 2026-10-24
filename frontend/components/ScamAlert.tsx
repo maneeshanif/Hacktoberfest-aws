@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
-import { StopIcon } from "./Icons";
+import { useSpeech } from "@/lib/useSpeech";
+import { SpeakerIcon, StopIcon } from "./Icons";
 
 export default function ScamAlert({ explanation, onDismiss }: { explanation: string; onDismiss: () => void }) {
-  const { t } = useI18n();
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const { t, locale } = useI18n();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const dismissRef = useRef<HTMLButtonElement>(null);
+  const parts = useMemo(() => [t.alert.title, explanation], [t.alert.title, explanation]);
+  const { available, speaking, toggle } = useSpeech(locale, parts);
 
   useEffect(() => {
-    buttonRef.current?.focus();
+    dismissRef.current?.focus();
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
@@ -17,9 +21,13 @@ export default function ScamAlert({ explanation, onDismiss }: { explanation: str
         e.preventDefault();
         onDismiss();
       } else if (e.key === "Tab") {
-        // Only one control: keep focus on it.
+        // Keep focus inside the alert: cycle through its buttons.
+        const buttons = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
+        if (buttons.length === 0) return;
         e.preventDefault();
-        buttonRef.current?.focus();
+        const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        const next = e.shiftKey ? i - 1 : i + 1;
+        buttons[(next + buttons.length) % buttons.length].focus();
       }
     }
     document.addEventListener("keydown", onKey);
@@ -31,6 +39,7 @@ export default function ScamAlert({ explanation, onDismiss }: { explanation: str
 
   return (
     <div
+      ref={dialogRef}
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="scam-alert-title"
@@ -44,9 +53,22 @@ export default function ScamAlert({ explanation, onDismiss }: { explanation: str
       <p id="scam-alert-desc" className="max-w-3xl text-[clamp(1.2rem,2.5vw,1.6rem)] leading-relaxed">
         {explanation}
       </p>
-      <button ref={buttonRef} type="button" onClick={onDismiss} className="btn min-h-16 min-w-56 bg-white text-[22px] text-ink hover:bg-tint">
-        {t.alert.dismiss}
-      </button>
+      <div className="flex flex-wrap justify-center gap-4">
+        <button ref={dismissRef} type="button" onClick={onDismiss} className="btn min-h-16 min-w-56 bg-white text-[22px] text-ink hover:bg-tint">
+          {t.alert.dismiss}
+        </button>
+        {available && (
+          <button
+            type="button"
+            onClick={toggle}
+            aria-pressed={speaking}
+            className="btn min-h-16 min-w-40 border-2 border-white text-[22px] text-white hover:bg-white/15"
+          >
+            <SpeakerIcon width={24} height={24} />
+            {speaking ? t.speak.stop : t.alert.listen}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

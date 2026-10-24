@@ -90,3 +90,14 @@ export const SendIcon = (p: IconProps) => (
     <path d="M21 3L10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5 21 3z" />
   </Svg>
 );
+export const MicIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21M9 21h6" />
+  </Svg>
+);
+export const StopSquareIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="6" y="6" width="12" height="12" rx="2.5" />
+  </Svg>
+);
