@@ -1,28 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
+import { SpeakerIcon } from "./Icons";
 
-function findUrduVoice(): SpeechSynthesisVoice | null {
+function findVoice(lang: string): SpeechSynthesisVoice | null {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
-  return window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith("ur")) ?? null;
+  return window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang)) ?? null;
 }
 
-// Hidden entirely unless the browser has an Urdu voice installed.
+// Hidden entirely unless the browser has a voice for the current language.
 export default function SpeakButton({ parts }: { parts: string[] }) {
+  const { t, locale } = useI18n();
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     const synth = window.speechSynthesis;
-    const update = () => setVoice(findUrduVoice());
+    const update = () => setVoice(findVoice(locale));
     update();
     synth.addEventListener("voiceschanged", update);
     return () => {
       synth.removeEventListener("voiceschanged", update);
       synth.cancel();
     };
-  }, []);
+  }, [locale]);
 
   if (!voice) return null;
 
@@ -34,13 +37,13 @@ export default function SpeakButton({ parts }: { parts: string[] }) {
       return;
     }
     synth.cancel();
-    const text = parts.filter(Boolean);
-    text.forEach((part, i) => {
+    const spoken = parts.filter(Boolean);
+    spoken.forEach((part, i) => {
       const u = new SpeechSynthesisUtterance(part);
-      u.lang = "ur-PK";
+      u.lang = voice?.lang ?? (locale === "ur" ? "ur-PK" : "en-US");
       u.voice = voice;
       u.rate = 0.9;
-      if (i === text.length - 1) {
+      if (i === spoken.length - 1) {
         u.onend = () => setSpeaking(false);
         u.onerror = () => setSpeaking(false);
       }
@@ -51,8 +54,8 @@ export default function SpeakButton({ parts }: { parts: string[] }) {
 
   return (
     <button type="button" onClick={toggle} aria-pressed={speaking} className={`btn ${speaking ? "btn-live" : "btn-secondary"}`}>
-      <span aria-hidden="true">🔊</span>
-      {speaking ? "سنا رہا ہوں… روکیں" : "سن لیں"}
+      <SpeakerIcon width={20} height={20} />
+      {speaking ? t.speak.stop : t.speak.start}
     </button>
   );
 }

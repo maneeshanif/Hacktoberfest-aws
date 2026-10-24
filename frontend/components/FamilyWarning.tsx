@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
+import { SendIcon } from "./Icons";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -27,12 +29,13 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 export default function FamilyWarning({ text }: { text: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
   }, [copied]);
 
   if (!text) return null;
@@ -40,7 +43,8 @@ export default function FamilyWarning({ text }: { text: string }) {
   return (
     <>
       <button type="button" className="btn btn-primary" onClick={async () => setCopied(await copyText(text))}>
-        <span aria-live="polite">{copied ? "کاپی ہو گیا ✓" : "گھر والوں کو بھیجیں"}</span>
+        <SendIcon width={20} height={20} />
+        <span aria-live="polite">{copied ? t.family.copied : t.family.send}</span>
       </button>
       <a
         className="btn btn-secondary"
@@ -48,7 +52,7 @@ export default function FamilyWarning({ text }: { text: string }) {
         target="_blank"
         rel="noopener noreferrer"
       >
-        واٹس ایپ پر بھیجیں
+        {t.family.whatsapp}
       </a>
     </>
   );

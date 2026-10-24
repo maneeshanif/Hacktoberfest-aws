@@ -10,7 +10,7 @@ import logging
 import time
 
 from . import agent_verify, config, llm, prompts
-from .schemas import FALLBACK, RED_FLAGS, Evidence, Extracted, Result
+from .schemas import FALLBACK, FALLBACK_EN, RED_FLAGS, Evidence, Extracted, Result
 from .tools import domains, web_search
 
 log = logging.getLogger("hifazat")
@@ -38,19 +38,20 @@ def _coerce(raw: dict) -> Result:
     )
 
 
-def safety_net(result: Result, evidence: list[Evidence]) -> Result:
+def safety_net(result: Result, evidence: list[Evidence], lang: str = "ur") -> Result:
     """Never let a message with red flags or bad link evidence come out as `safe`."""
     bad = [e for e in evidence if e.source in BAD_SOURCES]
     if bad and "unofficial_link" not in result.red_flags:
         result.red_flags.append("unofficial_link")
     if result.verdict == "safe" and (result.red_flags or bad):
         result.verdict = "suspicious"
+    fallback = FALLBACK_EN if lang == "en" else FALLBACK
     if not result.explanation_ur or not result.what_to_do_ur:
-        result.explanation_ur = result.explanation_ur or FALLBACK.explanation_ur
-        result.what_to_do_ur = result.what_to_do_ur or FALLBACK.what_to_do_ur
+        result.explanation_ur = result.explanation_ur or fallback.explanation_ur
+        result.what_to_do_ur = result.what_to_do_ur or fallback.what_to_do_ur
         if result.verdict == "safe":
             result.verdict = "suspicious"
-    result.family_warning_ur = result.family_warning_ur or FALLBACK.family_warning_ur
+    result.family_warning_ur = result.family_warning_ur or fallback.family_warning_ur
     return result
 
 
@@ -68,17 +69,18 @@ async def _verify(extracted: Extracted, text: str, web_check: bool) -> list[Evid
     return evidence + await web_search.scam_reports([t for t in terms if t])
 
 
-async def analyze(image: bytes | None, text: str, question: str, web_check: bool) -> Result:
+async def analyze(image: bytes | None, text: str, question: str, web_check: bool, lang: str = "ur") -> Result:
+    lang = "en" if lang == "en" else "ur"
     t0 = time.perf_counter()
     web_check = web_check and config.ENABLE_WEB_CHECK
     try:
         image_url = llm.prep_image(image) if image else None
-        result = _coerce(await llm.ask_json(prompts.SYSTEM, prompts.user_text(text, question), image_url))
+        result = _coerce(await llm.ask_json(prompts.system(lang), prompts.user_text(text, question), image_url))
         evidence = await _verify(result.extracted, text, web_check)
         if any(e.source == "tavily" for e in evidence):
             try:
                 second = _coerce(await llm.ask_json(
-                    prompts.VERDICT_SYSTEM,
+                    prompts.system(lang, with_evidence=True),
                     prompts.verdict_text(
                         result.extracted.model_dump_json(),
                         json.dumps([e.model_dump() for e in evidence], ensure_ascii=False),
@@ -91,10 +93,10 @@ async def analyze(image: bytes | None, text: str, question: str, web_check: bool
             except Exception as e:
                 log.warning("verdict re-check failed, keeping first verdict: %s", e)
         result.evidence = evidence
-        result = safety_net(result, evidence)
+        result = safety_net(result, evidence, lang)
     except Exception as e:
         log.exception("analyze failed: %s", e)
-        result = FALLBACK.model_copy(deep=True)
+        result = (FALLBACK_EN if lang == "en" else FALLBACK).model_copy(deep=True)
     result.mode = config.mode()
     result.latency_ms = int((time.perf_counter() - t0) * 1000)
     return result

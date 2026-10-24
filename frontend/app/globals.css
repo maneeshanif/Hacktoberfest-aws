@@ -1,63 +1,75 @@
 @import "tailwindcss";
 
-/* Conclave AI tokens + Hifazat verdict colours (PRD section 9). Flat colour only. */
+/* Flat colour only: no gradients, no heavy shadows. Verdict colours are reserved for verdicts. */
 :root {
-  --ink: #0b1512;
-  --chalk: #f1f4ec;
-  --forest: #14302a;
-  --mist: #8fa39a;
-  --lime: #c8f169;
-  --lime-deep: #5e8a00;
-  --violet: #7c5cff;
-  --safe: #1f9d55;
-  --warn: #f77f00;
+  --ink: #0e1a3a;
+  --paper: #ffffff;
+  --tint: #eef1fd;
+  --line: #dde2f4;
+  --muted: #4f5a82;
+  --blue: #3b5bfd;
+  --blue-deep: #2a45d6;
+  --safe: #167a43;
+  --warn: #f5a30a;
   --danger: #d62828;
 }
 
 @theme inline {
   --color-ink: var(--ink);
-  --color-chalk: var(--chalk);
-  --color-forest: var(--forest);
-  --color-mist: var(--mist);
-  --color-lime: var(--lime);
-  --color-lime-deep: var(--lime-deep);
-  --color-violet: var(--violet);
+  --color-paper: var(--paper);
+  --color-tint: var(--tint);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-blue: var(--blue);
+  --color-blue-deep: var(--blue-deep);
   --color-safe: var(--safe);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
-  /* Latin font first; Urdu glyphs fall through to the Noto font. */
-  --font-body: var(--font-outfit), var(--font-naskh), sans-serif;
-  --font-heading: var(--font-syne), var(--font-nastaliq), serif;
-  --font-urdu-heading: var(--font-nastaliq), serif;
-  --font-mono: var(--font-plex-mono), var(--font-naskh), monospace;
+  --font-sans: var(--font-jakarta), var(--font-naskh), sans-serif;
 }
 
 html {
-  background: var(--chalk);
+  background: var(--paper);
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
 }
 
 body {
-  background: var(--chalk);
+  background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-body);
-  font-size: 22px;
-  line-height: 1.9;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  line-height: 1.65;
 }
 
 h1,
 h2,
 h3 {
-  font-family: var(--font-heading);
-  line-height: 2.1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-wrap: balance;
 }
 
-/* Visible focus ring: lime-deep on light, lime on dark surfaces. */
+/* Urdu needs larger type and far more line height than Latin. */
+html[lang="ur"] body {
+  font-size: 22px;
+  line-height: 1.95;
+}
+html[lang="ur"] h1,
+html[lang="ur"] h2,
+html[lang="ur"] h3 {
+  font-family: var(--font-nastaliq), serif;
+  letter-spacing: 0;
+  line-height: 2;
+}
+
 :focus-visible {
-  outline: 3px solid var(--lime-deep);
+  outline: 3px solid var(--blue);
   outline-offset: 3px;
 }
 .on-dark :focus-visible {
-  outline-color: var(--lime);
+  outline-color: #ffffff;
 }
 
 .btn {
@@ -65,43 +77,52 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 64px;
-  padding: 0.5rem 2rem;
+  min-height: 52px;
+  padding: 0.5rem 1.5rem;
   border-radius: 999px;
   font-weight: 700;
-  font-size: 24px;
-  line-height: 1.6;
+  font-size: 1rem;
+  line-height: 1.4;
   text-align: center;
   cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+html[lang="ur"] .btn {
+  font-size: 1.15rem;
+  min-height: 60px;
 }
 .btn:disabled {
   cursor: not-allowed;
+  opacity: 0.45;
 }
 .btn-primary {
-  background: var(--lime);
-  color: var(--ink);
+  background: var(--blue);
+  color: #fff;
 }
-.btn-primary:disabled {
-  background: var(--mist);
-  color: var(--ink);
+.btn-primary:hover:not(:disabled) {
+  background: var(--blue-deep);
 }
 .btn-secondary {
-  background: transparent;
+  background: var(--paper);
   color: var(--ink);
-  border: 3px solid var(--forest);
+  border: 2px solid var(--line);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--tint);
+  border-color: var(--blue);
 }
 .btn-live {
-  background: var(--violet);
+  background: var(--ink);
   color: #fff;
-  border: 3px solid var(--violet);
+  border: 2px solid var(--ink);
 }
 
-/* Single violet stud for "thinking". Static under reduced motion. */
+/* Single dot for "thinking". Static under reduced motion. */
 .stud {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
-  background: var(--violet);
+  background: var(--blue);
   animation: stud-pulse 1.2s ease-in-out infinite;
 }
 @keyframes stud-pulse {
@@ -117,6 +138,9 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
@@ -129,9 +153,14 @@ h3 {
   }
 }
 
-/* Ruled-line "Ledger" header for the evidence list. */
-.ledger {
-  height: 14px;
-  border-top: 2px solid var(--mist);
-  border-bottom: 2px solid var(--mist);
+/* FAQ accordion marker */
+details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details[open] > summary .chev {
+  transform: rotate(180deg);
 }

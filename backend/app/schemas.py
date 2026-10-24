@@ -42,6 +42,13 @@ class Result(BaseModel):
     latency_ms: int = 0
 
 
+FALLBACK_EN = Result(
+    verdict="suspicious",
+    explanation_ur="We could not check this message. Treat it with caution.",
+    what_to_do_ur="Do not share any code, PIN or money. Ask someone you trust first.",
+    family_warning_ur="⚠️ A suspicious message came in. Do not share any code or PIN, and check with me first.",
+)
+
 FALLBACK = Result(
     verdict="suspicious",
     red_flags=[],

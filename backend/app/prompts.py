@@ -32,6 +32,17 @@ You will also be given EVIDENCE gathered by tools (link checks, optional web res
 suspicion, but evidence of a problem is stronger than absence of evidence. Do not copy evidence text into the Urdu fields verbatim."""
 
 
+ENGLISH_RULE = """
+
+LANGUAGE OVERRIDE: write explanation_ur, what_to_do_ur and family_warning_ur in simple, short English instead of Urdu.
+Keep the JSON key names exactly as listed. Use plain words a non-expert would understand."""
+
+
+def system(lang: str = "ur", with_evidence: bool = False) -> str:
+    base = VERDICT_SYSTEM if with_evidence else SYSTEM
+    return base + ENGLISH_RULE if lang == "en" else base
+
+
 def user_text(text: str, question: str) -> str:
     parts = ["Analyze the message above (image, if any) and answer in the required JSON."]
     if text.strip():

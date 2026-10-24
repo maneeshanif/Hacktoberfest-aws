@@ -27,10 +27,11 @@ async def analyze(
     text: str = Form(""),
     question: str = Form(""),
     web_check: bool = Form(False),
+    lang: str = Form("ur"),
 ):
     raw = await image.read() if image is not None and image.filename else None
     if raw is not None and len(raw) > config.MAX_UPLOAD_BYTES:
         raise HTTPException(413, "Image too large (max 8 MB)")
     if not raw and not text.strip():
         raise HTTPException(400, "Send an image or some text")
-    return await pipeline.analyze(raw or None, text, question, web_check)
+    return await pipeline.analyze(raw or None, text, question, web_check, lang)
