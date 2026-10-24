@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Hifazat logo: a shield made of studs with a check">
+  <rect width="200" height="200" rx="36" fill="#14302A"/>
+  <circle cx="28" cy="28" r="9" fill="#F1F4EC"/>
+  <circle cx="52" cy="28" r="9" fill="#F1F4EC"/>
+  <circle cx="76" cy="28" r="9" fill="#F1F4EC"/>
+  <circle cx="100" cy="28" r="9" fill="#F1F4EC"/>
+  <circle cx="124" cy="28" r="9" fill="#F1F4EC"/>
+  <circle cx="148" cy="28" r="9" fill="#F1F4EC"/>
+  <circle cx="172" cy="28" r="9" fill="#F1F4EC"/>
+  <circle cx="28" cy="52" r="9" fill="#F1F4EC"/>
+  <circle cx="52" cy="52" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="76" cy="52" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="100" cy="52" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="124" cy="52" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="148" cy="52" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="172" cy="52" r="9" fill="#F1F4EC"/>
+  <circle cx="28" cy="76" r="9" fill="#F1F4EC"/>
+  <circle cx="52" cy="76" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="76" cy="76" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="100" cy="76" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="124" cy="76" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="148" cy="76" r="9" fill="#C8F169"/>
+  <circle cx="172" cy="76" r="9" fill="#F1F4EC"/>
+  <circle cx="28" cy="100" r="9" fill="#F1F4EC"/>
+  <circle cx="52" cy="100" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="76" cy="100" r="9" fill="#C8F169"/>
+  <circle cx="100" cy="100" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="124" cy="100" r="9" fill="#C8F169"/>
+  <circle cx="148" cy="100" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="172" cy="100" r="9" fill="#F1F4EC"/>
+  <circle cx="28" cy="124" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="52" cy="124" r="9" fill="#F1F4EC"/>
+  <circle cx="76" cy="124" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="100" cy="124" r="9" fill="#C8F169"/>
+  <circle cx="124" cy="124" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="148" cy="124" r="9" fill="#F1F4EC"/>
+  <circle cx="172" cy="124" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="28" cy="148" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="52" cy="148" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="76" cy="148" r="9" fill="#F1F4EC"/>
+  <circle cx="100" cy="148" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="124" cy="148" r="9" fill="#F1F4EC"/>
+  <circle cx="148" cy="148" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="172" cy="148" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="28" cy="172" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="52" cy="172" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="76" cy="172" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="100" cy="172" r="9" fill="#F1F4EC"/>
+  <circle cx="124" cy="172" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="148" cy="172" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+  <circle cx="172" cy="172" r="4.5" fill="#F1F4EC" opacity="0.18"/>
+</svg>

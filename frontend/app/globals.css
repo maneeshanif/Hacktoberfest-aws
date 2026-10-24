@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+/* Conclave AI tokens + Hifazat verdict colours (PRD section 9). Flat colour only. */
+:root {
+  --ink: #0b1512;
+  --chalk: #f1f4ec;
+  --forest: #14302a;
+  --mist: #8fa39a;
+  --lime: #c8f169;
+  --lime-deep: #5e8a00;
+  --violet: #7c5cff;
+  --safe: #1f9d55;
+  --warn: #f77f00;
+  --danger: #d62828;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-chalk: var(--chalk);
+  --color-forest: var(--forest);
+  --color-mist: var(--mist);
+  --color-lime: var(--lime);
+  --color-lime-deep: var(--lime-deep);
+  --color-violet: var(--violet);
+  --color-safe: var(--safe);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  /* Latin font first; Urdu glyphs fall through to the Noto font. */
+  --font-body: var(--font-outfit), var(--font-naskh), sans-serif;
+  --font-heading: var(--font-syne), var(--font-nastaliq), serif;
+  --font-urdu-heading: var(--font-nastaliq), serif;
+  --font-mono: var(--font-plex-mono), var(--font-naskh), monospace;
+}
+
+html {
+  background: var(--chalk);
+}
+
+body {
+  background: var(--chalk);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 22px;
+  line-height: 1.9;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  line-height: 2.1;
+}
+
+/* Visible focus ring: lime-deep on light, lime on dark surfaces. */
+:focus-visible {
+  outline: 3px solid var(--lime-deep);
+  outline-offset: 3px;
+}
+.on-dark :focus-visible {
+  outline-color: var(--lime);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 64px;
+  padding: 0.5rem 2rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.6;
+  text-align: center;
+  cursor: pointer;
+}
+.btn:disabled {
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--lime);
+  color: var(--ink);
+}
+.btn-primary:disabled {
+  background: var(--mist);
+  color: var(--ink);
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 3px solid var(--forest);
+}
+.btn-live {
+  background: var(--violet);
+  color: #fff;
+  border: 3px solid var(--violet);
+}
+
+/* Single violet stud for "thinking". Static under reduced motion. */
+.stud {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--violet);
+  animation: stud-pulse 1.2s ease-in-out infinite;
+}
+@keyframes stud-pulse {
+  0%,
+  100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .stud {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Ruled-line "Ledger" header for the evidence list. */
+.ledger {
+  height: 14px;
+  border-top: 2px solid var(--mist);
+  border-bottom: 2px solid var(--mist);
+}
