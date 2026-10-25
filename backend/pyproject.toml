@@ -1,7 +1,7 @@
 [project]
 name = "hifazat-backend"
 version = "0.1.0"
-description = "Hifazat (حفاظت): private AI scam shield, powered by Gemma 4"
+description = "Hifazat (حفاظت): private AI scam shield for families (English and Urdu), powered by Gemma 4"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",
