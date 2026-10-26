@@ -38,6 +38,9 @@ class Result(BaseModel):
     family_warning_ur: str = ""
     extracted: Extracted = Field(default_factory=Extracted)
     evidence: list[Evidence] = Field(default_factory=list)
+    # Checks that actually ran for this message ("link_heuristics", "safe_browsing", "web_search"), so the UI can say
+    # "Safe Browsing: no match" instead of silently showing nothing.
+    checks_run: list[str] = Field(default_factory=list)
     mode: str = "local"
     latency_ms: int = 0
 

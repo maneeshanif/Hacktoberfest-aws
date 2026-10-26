@@ -34,6 +34,7 @@ export interface AnalyzeResult {
   family_warning_ur: string;
   extracted: Extracted;
   evidence: Evidence[];
+  checks_run?: string[];
   mode: "local" | "hosted";
   latency_ms: number;
 }
@@ -184,6 +185,7 @@ function normalize(raw: Partial<AnalyzeResult>, lang: Lang): AnalyzeResult {
     family_warning_ur: raw.family_warning_ur ?? "",
     extracted: raw.extracted ?? { links: [], phones: [], claimed_sender: null, asks_for: [], urgency: false },
     evidence: Array.isArray(raw.evidence) ? raw.evidence : [],
+    checks_run: Array.isArray(raw.checks_run) ? raw.checks_run.filter((k): k is string => typeof k === "string") : [],
     mode: raw.mode === "hosted" ? "hosted" : "local",
     latency_ms: typeof raw.latency_ms === "number" ? raw.latency_ms : 0,
   };

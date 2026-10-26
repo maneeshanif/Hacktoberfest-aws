@@ -114,7 +114,7 @@ export function Engine({ checks }: { checks: Checks | null }) {
 }
 
 // Honest about what a website can and cannot do: it cannot read SMS, so this lists the ways to get close.
-export function AutoCheck() {
+export function AutoCheck({ checks }: { checks: Checks | null }) {
   const { t } = useI18n();
   const a = t.auto;
   return (
@@ -133,7 +133,16 @@ export function AutoCheck() {
                   {pad(i + 1)}
                 </span>
                 <div>
-                  <span className="chip !text-[13px]">{o.tag}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="chip !text-[13px]">{o.tag}</span>
+                    {/* The webhook is the only option that needs server setup, so show whether this server has it on. */}
+                    {i === a.options.length - 1 && (
+                      <span className={`chip !text-[13px] ${checks?.listener ? "!bg-lime text-ink" : "text-muted"}`}>
+                        <span aria-hidden="true" className={`size-2 rounded-full ${checks?.listener ? "bg-forest" : "bg-mist"}`} />
+                        {checks?.listener ? t.engine.on : t.engine.off}
+                      </span>
+                    )}
+                  </div>
                   <h3 className="mt-2 text-[clamp(1.35rem,2.4vw,1.7rem)] leading-snug">{o.title}</h3>
                   <p className="mt-1.5 max-w-xl text-[17px] text-muted">{o.body}</p>
                 </div>

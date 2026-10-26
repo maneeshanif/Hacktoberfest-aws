@@ -34,7 +34,11 @@ async def run(extracted: Extracted, web_check: bool) -> list[Evidence]:
     client = AsyncOpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY, timeout=config.LLM_TIMEOUT)
     agent = Agent(
         name="Verifier",
-        instructions="Call check_domain for every link given. If search tool exists, call it once for the sender or phone. Then reply 'done'.",
+        instructions=(
+            "Call check_domain for every link given. If a search tool exists, call it once with the host of each link "
+            "(at most 2) and once with the phone number if there is one. Pass only the bare host or number as the term. "
+            "Then reply 'done'."
+        ),
         model=OpenAIChatCompletionsModel(model=config.LLM_MODEL, openai_client=client),
         model_settings=ModelSettings(temperature=0),
         tools=tools,

@@ -9,6 +9,16 @@ from app.main import app
 from app.schemas import Evidence, Result
 from app.tools import domains
 
+@pytest.fixture(autouse=True)
+def isolate_from_env(monkeypatch):
+    """Tests must never reach real services just because the developer's .env turns them on."""
+    monkeypatch.setattr(config, "ENABLE_WEB_CHECK", False)
+    monkeypatch.setattr(config, "USE_AGENT_VERIFY", False)
+    monkeypatch.setattr(config, "SAFE_BROWSING_API_KEY", "")
+    monkeypatch.setattr(config, "TAVILY_API_KEY", "")
+    monkeypatch.setattr(config, "LISTEN_TOKEN", "")
+
+
 SCAM = {
     "verdict": "scam",
     "red_flags": ["asks_otp_pin_cnic_card", "urgency_threat", "made_up_flag"],
@@ -149,8 +159,10 @@ def test_listen_rejects_bad_token_and_accepts_good(monkeypatch):
 def test_health_reports_active_checks(monkeypatch):
     monkeypatch.setattr(config, "SAFE_BROWSING_API_KEY", "")
     monkeypatch.setattr(config, "LISTEN_TOKEN", "")
+    monkeypatch.setattr(config, "ENABLE_WEB_CHECK", False)
+    monkeypatch.setattr(config, "USE_AGENT_VERIFY", False)
     checks = TestClient(app).get("/api/health").json()["checks"]
-    assert checks == {"safe_browsing": False, "web_search": False, "agents": config.USE_AGENT_VERIFY, "listener": False}
+    assert checks == {"safe_browsing": False, "web_search": False, "agents": False, "listener": False}
 
 
 def test_english_prompt_does_not_ask_for_urdu():
@@ -159,3 +171,95 @@ def test_english_prompt_does_not_ask_for_urdu():
     en, ur = prompts.system("en"), prompts.system("ur")
     assert "short Urdu (script" not in en and "short English" in en
     assert "short Urdu (script" in ur
+
+
+async def test_web_search_runs_when_server_enables_it_and_client_is_silent(monkeypatch):
+    patch(monkeypatch, SCAM)
+    calls = []
+
+    async def fake_reports(terms):
+        calls.append(terms)
+        return [Evidence(claim="web result: x", source="tavily", detail="https://x.example")]
+
+    monkeypatch.setattr(config, "ENABLE_WEB_CHECK", True)
+    monkeypatch.setattr(pipeline.web_search, "scam_reports", fake_reports)
+    res = await pipeline.analyze(None, "visit http://hbl-secure-login.example now", "", None)
+    assert calls and any(e.source == "tavily" for e in res.evidence)
+
+    calls.clear()
+    await pipeline.analyze(None, "visit http://hbl-secure-login.example now", "", False)
+    assert not calls  # an explicit "no" from the client wins
+
+
+def _hits(*items):
+    return [{"title": t, "content": c, "url": u} for t, c, u in items]
+
+
+async def test_web_search_drops_irrelevant_hits_and_keeps_matching_ones(monkeypatch):
+    from app.tools import web_search
+
+    monkeypatch.setattr(config, "TAVILY_API_KEY", "x")
+    monkeypatch.setattr(
+        web_search,
+        "_search",
+        lambda term, kind: _hits(
+            ("Report on hbl-secure-login.top", "phishing site", "https://scamverif.example/hbl-secure-login.top"),
+            ("Instagram reel", "dance video", "https://instagram.example/reel/1"),
+        ),
+    )
+    ev = await web_search.scam_reports(["hbl-secure-login.top"])
+    assert [e.source for e in ev] == ["tavily"] and "hbl-secure-login.top" in ev[0].claim
+
+
+async def test_web_search_says_so_when_nothing_relevant_is_found(monkeypatch):
+    from app.tools import web_search
+
+    monkeypatch.setattr(config, "TAVILY_API_KEY", "x")
+    monkeypatch.setattr(web_search, "_search", lambda term, kind: _hits(("Stock price", "shares", "https://invest.example")))
+    ev = await web_search.scam_reports(["0300-1234567"])
+    assert len(ev) == 1 and "No public scam reports" in ev[0].claim and "not mean it is safe" in ev[0].claim
+
+
+async def test_web_search_skips_generic_sender_names_and_failures(monkeypatch):
+    from app.tools import web_search
+
+    monkeypatch.setattr(config, "TAVILY_API_KEY", "x")
+
+    def boom(term, kind):
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(web_search, "_search", boom)
+    assert await web_search.scam_reports(["Bank", "", "evil.top"]) == []  # only evil.top is searched, and it failed
+
+
+async def test_checks_run_lists_only_checks_that_really_ran(monkeypatch):
+    patch(monkeypatch, SCAM)
+    monkeypatch.setattr(config, "ENABLE_WEB_CHECK", False)
+
+    async def not_run(links):
+        return None  # no key, or the lookup failed
+
+    monkeypatch.setattr(pipeline.safe_browsing, "check", not_run)
+    res = await pipeline.analyze(None, "see http://hbl-secure-login.example", "", None)
+    assert res.checks_run == ["link_heuristics"]
+
+    async def clean(links):
+        return []
+
+    monkeypatch.setattr(pipeline.safe_browsing, "check", clean)
+    res = await pipeline.analyze(None, "see http://hbl-secure-login.example", "", None)
+    assert res.checks_run == ["link_heuristics", "safe_browsing"]
+
+
+async def test_no_web_search_for_a_message_with_no_link_or_number(monkeypatch):
+    patch(monkeypatch, {**SCAM, "extracted": {"links": [], "phones": [], "claimed_sender": "Mum", "asks_for": [], "urgency": False}})
+    monkeypatch.setattr(config, "ENABLE_WEB_CHECK", True)
+    seen = []
+
+    async def spy(terms):
+        seen.append(terms)
+        return []
+
+    monkeypatch.setattr(pipeline.web_search, "scam_reports", spy)
+    await pipeline.analyze(None, "Dinner at 8? Mum is cooking", "", None)
+    assert seen == [[]]  # called with nothing to search, so a bare sender name triggers no query

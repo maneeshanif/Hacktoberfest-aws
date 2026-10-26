@@ -38,7 +38,7 @@ async def analyze(
     image: UploadFile | None = File(None),
     text: str = Form(""),
     question: str = Form(""),
-    web_check: bool = Form(False),
+    web_check: bool | None = Form(None),
     lang: str = Form("ur"),
 ):
     raw = await image.read() if image is not None and image.filename else None
@@ -71,5 +71,5 @@ async def listen(body: ListenIn, x_listen_token: str = Header("")):
     if not hmac.compare_digest(x_listen_token.encode(), config.LISTEN_TOKEN.encode()):
         raise HTTPException(401, "Bad token")
     text = f"From: {body.sender}\n{body.text}" if body.sender else body.text
-    r = await pipeline.analyze(None, text, "", False, body.lang)
+    r = await pipeline.analyze(None, text, "", None, body.lang)
     return ListenOut(verdict=r.verdict, red_flags=list(r.red_flags), summary=r.explanation_ur, what_to_do=r.what_to_do_ur)

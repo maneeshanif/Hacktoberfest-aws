@@ -60,24 +60,36 @@ def safety_net(result: Result, evidence: list[Evidence], lang: str = "ur") -> Re
     return result
 
 
-async def _verify(extracted: Extracted, text: str, web_check: bool) -> list[Evidence]:
+async def _verify(extracted: Extracted, text: str, web_check: bool) -> tuple[list[Evidence], list[str]]:
+    """Returns (evidence, names of the checks that ran)."""
     links = list(dict.fromkeys(extracted.links + domains.find_links(text)))[:5]
-    evidence = domains.check_links(links) + await safe_browsing.check(links)
+    evidence = domains.check_links(links)
+    ran = ["link_heuristics"] if links else []
+    listed = await safe_browsing.check(links)
+    if listed is not None:
+        evidence += listed
+        ran.append("safe_browsing")
     if not web_check:
-        return evidence
+        return evidence, ran
     if config.USE_AGENT_VERIFY:
         try:
-            return evidence + [e for e in await agent_verify.run(extracted, True) if e.source == "tavily"]
+            found = [e for e in await agent_verify.run(extracted, True) if e.source == "tavily"]
+            log.info("agent verify ran: %d web evidence", len(found))
+            return evidence + found, ran + (["web_search"] if found else [])
         except Exception as e:
             log.warning("agent verify failed, using direct tools: %s", e)
-    terms = [domains.host_of(l) for l in links[:1]] + extracted.phones[:1] + [extracted.claimed_sender]
-    return evidence + await web_search.scam_reports([t for t in terms if t])
+    terms = [domains.host_of(l) for l in links[:2]] + extracted.phones[:1]
+    if terms:  # a bare sender name ("Mum", "Ali") is not worth a search; it only matters next to a link or number
+        terms.append(extracted.claimed_sender)
+    found = await web_search.scam_reports([t for t in terms if t])
+    return evidence + found, ran + (["web_search"] if found else [])
 
 
-async def analyze(image: bytes | None, text: str, question: str, web_check: bool, lang: str = "ur") -> Result:
+async def analyze(image: bytes | None, text: str, question: str, web_check: bool | None, lang: str = "ur") -> Result:
     lang = "en" if lang == "en" else "ur"
     t0 = time.perf_counter()
-    web_check = web_check and config.ENABLE_WEB_CHECK
+    # None = the server decides (ENABLE_WEB_CHECK); an explicit False from a client always turns it off.
+    web_check = config.ENABLE_WEB_CHECK if web_check is None else (web_check and config.ENABLE_WEB_CHECK)
     try:
         image_url = llm.prep_image(image) if image else None
 
@@ -90,7 +102,7 @@ async def analyze(image: bytes | None, text: str, question: str, web_check: bool
         extracted = _coerce(prosecutor_raw).extracted
 
         # 3. VERIFY: tool-based evidence
-        evidence = await _verify(extracted, text, web_check)
+        evidence, checks_run = await _verify(extracted, text, web_check)
         evidence_json = json.dumps([e.model_dump() for e in evidence], ensure_ascii=False)
 
         # 4. JUDGE: weigh both arguments and the tool evidence
@@ -109,6 +121,7 @@ async def analyze(image: bytes | None, text: str, question: str, web_check: bool
         if not (result.extracted.links or result.extracted.phones):
             result.extracted = extracted
         result.evidence = evidence
+        result.checks_run = checks_run
         result = safety_net(result, evidence, lang)
 
     except Exception as e:

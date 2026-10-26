@@ -202,7 +202,7 @@ export default function Home() {
         <WhatWeCatch />
         <HowItWorks />
         <Engine checks={checks} />
-        <AutoCheck />
+        <AutoCheck checks={checks} />
         <AppSection />
         <Privacy />
         <Faq />
