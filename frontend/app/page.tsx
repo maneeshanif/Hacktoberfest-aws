@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import Uploader from "@/components/Uploader";
+import PhoneDemo from "@/components/PhoneDemo";
+import Progress from "@/components/Progress";
 import VerdictCard from "@/components/VerdictCard";
 import ScamAlert from "@/components/ScamAlert";
-import { Faq, Footer, HowItWorks, Privacy, WhatWeCatch } from "@/components/Sections";
+import { AppSection, AutoCheck, Engine, Faq, Footer, HowItWorks, Privacy, WhatWeCatch } from "@/components/Sections";
 import { CheckIcon, LockIcon } from "@/components/Icons";
+import StudShield from "@/components/StudShield";
 import {
   analyze,
   ApiError,
@@ -15,10 +18,12 @@ import {
   USE_MOCK,
   type AnalyzeInput,
   type AnalyzeResult,
+  type Checks,
   type ApiErrorKind,
   type Verdict,
 } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { takeShared, type SharedPayload } from "@/lib/shared";
 
 type State =
   | { status: "idle" }
@@ -37,14 +42,31 @@ export default function Home() {
   const [state, setState] = useState<State>({ status: "idle" });
   const [alertOpen, setAlertOpen] = useState(false);
   const [localMode, setLocalMode] = useState(false);
+  const [checks, setChecks] = useState<Checks | null>(null);
   const [uploaderKey, setUploaderKey] = useState(0);
   const [lastInput, setLastInput] = useState<AnalyzeInput | null>(null);
+  const [shared, setShared] = useState<SharedPayload | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     getHealth()
-      .then((h) => setLocalMode(h.ok && h.mode === "local"))
+      .then((h) => {
+        setLocalMode(h.ok && h.mode === "local");
+        setChecks(h.checks ?? null);
+      })
       .catch(() => setLocalMode(false));
+  }, []);
+
+  // A message shared from the phone's Share menu (see public/sw.js) lands here as ?shared=1.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has("shared")) return;
+    window.history.replaceState(null, "", "/");
+    takeShared().then((payload) => {
+      if (!payload) return;
+      setShared(payload);
+      setUploaderKey((k) => k + 1);
+      document.getElementById("check")?.scrollIntoView({ block: "center" });
+    });
   }, []);
 
   const showResult = useCallback((result: AnalyzeResult, isExample: boolean) => {
@@ -67,6 +89,7 @@ export default function Home() {
 
   function reset() {
     setLastInput(null);
+    setShared(null);
     setAlertOpen(false);
     setState({ status: "idle" });
     setUploaderKey((k) => k + 1);
@@ -102,38 +125,39 @@ export default function Home() {
       <Nav />
 
       <main id="top">
-        <section className="bg-tint px-4 pb-20 pt-14 sm:px-6 sm:pb-28 sm:pt-20">
-          <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 text-center">
-            <h1 className="text-[clamp(2.6rem,7vw,5rem)]">{t.hero.title}</h1>
-            <p className="max-w-2xl text-[20px] text-muted">{t.hero.sub}</p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <a href="#check" className="btn btn-primary !min-h-14 text-[18px]">
-                {t.hero.primary}
-              </a>
-              <a href="#how" className="btn btn-secondary !min-h-14 text-[18px]">
-                {t.hero.secondary}
-              </a>
+        <section className="on-dark overflow-hidden bg-forest text-chalk">
+          <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-32 sm:px-6 sm:pt-40 lg:grid-cols-[1.1fr_0.9fr] lg:pb-28">
+            <div className="flex flex-col items-start gap-8">
+              <h1 className="text-[clamp(2.5rem,5.6vw,4.5rem)]">{t.hero.title}</h1>
+              <p className="max-w-xl text-[clamp(1.15rem,2vw,1.4rem)] text-chalk/85">{t.hero.sub}</p>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                <a href="#check" className="btn btn-primary !min-h-16 text-[19px]">
+                  {t.hero.primary}
+                </a>
+                <a href="#how" className="btn btn-outline-light !min-h-16 text-[19px]">
+                  {t.hero.secondary}
+                </a>
+              </div>
+              <ul className="w-full max-w-md border-t-[1.5px] border-lime/70">
+                {t.hero.points.map((point) => (
+                  <li key={point} className="flex items-center gap-3 border-b border-chalk/20 py-3 text-[17px] font-medium">
+                    <CheckIcon width={20} height={20} className="shrink-0 text-lime" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-[15px] font-semibold">
-              {t.hero.points.map((point) => (
-                <li key={point} className="flex items-center gap-1.5">
-                  <CheckIcon width={18} height={18} className="text-blue" />
-                  {point}
-                </li>
-              ))}
-            </ul>
+            <PhoneDemo />
           </div>
+        </section>
 
-          <div id="check" className="mx-auto mt-14 w-full max-w-3xl scroll-mt-24 overflow-hidden rounded-3xl border-2 border-ink bg-paper">
-            <div className="flex items-center gap-3 border-b-2 border-ink px-4 py-3">
-              <span className="flex gap-1.5" aria-hidden="true">
-                <span className="size-3 rounded-full bg-danger" />
-                <span className="size-3 rounded-full bg-warn" />
-                <span className="size-3 rounded-full bg-safe" />
-              </span>
-              <span className="text-[15px] font-bold">{t.checker.title}</span>
+        <section className="px-3 py-12 sm:px-6 sm:py-20">
+          <div id="check" className="card mx-auto w-full max-w-3xl scroll-mt-28 overflow-hidden !border-ink">
+            <div className="on-dark flex items-center gap-3 bg-forest px-5 py-4 text-chalk">
+              <StudShield size={30} className="text-chalk" />
+              <h2 className="font-display text-[22px] font-extrabold">{t.checker.title}</h2>
               {localMode && (
-                <span className="ms-auto flex items-center gap-1.5 rounded-full bg-tint px-3 py-1 text-[13px] font-semibold">
+                <span className="chip ms-auto !bg-lime !text-[12px] !text-ink">
                   <LockIcon width={14} height={14} />
                   {t.checker.private}
                 </span>
@@ -141,19 +165,14 @@ export default function Home() {
             </div>
 
             <div className="p-4 sm:p-6">
-              {state.status === "idle" && <Uploader key={uploaderKey} onSubmit={run} />}
+              {state.status === "idle" && <Uploader key={uploaderKey} onSubmit={run} initial={shared} />}
 
-              {state.status === "loading" && (
-                <div className="flex flex-col items-center gap-5 py-16" role="status" aria-live="polite">
-                  <div className="stud" aria-hidden="true" />
-                  <p className="text-[20px] font-bold">{t.checker.loading}</p>
-                </div>
-              )}
+              {state.status === "loading" && <Progress />}
 
               {state.status === "error" && (
-                <div role="alert" className="flex flex-col gap-4 rounded-2xl border-2 border-warn p-5">
+                <div role="alert" className="flex flex-col gap-4 rounded-2xl bg-warn-soft p-5">
                   <h2 className="text-[26px]">{t.checker.errorTitle}</h2>
-                  <p className="text-[19px]">{t.checker.errors[state.kind]}</p>
+                  <p className="text-[18px]">{t.checker.errors[state.kind]}</p>
                   <p className="text-muted">{t.checker.errorAdvice}</p>
                   <div className="flex flex-wrap gap-3">
                     {lastInput && (
@@ -182,6 +201,9 @@ export default function Home() {
 
         <WhatWeCatch />
         <HowItWorks />
+        <Engine checks={checks} />
+        <AutoCheck />
+        <AppSection />
         <Privacy />
         <Faq />
       </main>

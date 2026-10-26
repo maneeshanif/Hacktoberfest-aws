@@ -5,6 +5,7 @@ import type { AnalyzeInput } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { ClipboardIcon, CloseIcon, ImageIcon } from "./Icons";
 import MicButton from "./MicButton";
+import { useClipboardWatch } from "@/lib/useClipboardWatch";
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -13,11 +14,15 @@ function isTypingTarget(el: EventTarget | null): boolean {
   return el instanceof HTMLElement && (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable);
 }
 
-export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput) => void }) {
+type Initial = { text: string; image: File | null };
+
+export default function Uploader({ onSubmit, initial }: { onSubmit: (input: AnalyzeInput) => void; initial?: Initial | null }) {
   const { t } = useI18n();
   const u = t.uploader;
+  const w = t.watch;
+  const watch = useClipboardWatch();
   const [picked, setPicked] = useState<{ file: File; url: string } | null>(null);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initial?.text ?? "");
   const [question, setQuestion] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -43,6 +48,11 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
     },
     [u, setImage],
   );
+
+  // A message shared to the installed app arrives as `initial`: show its screenshot once on mount.
+  useEffect(() => {
+    if (initial?.image) setImage(initial.image);
+  }, [initial, setImage]);
 
   // Release the object URL when the uploader goes away.
   useEffect(
@@ -106,6 +116,31 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
         submit();
       }}
     >
+      {watch.found && (
+        <div role="status" className="rise flex flex-col gap-3 rounded-2xl bg-violet p-4 text-white">
+          <p className="font-mono text-[13px] font-medium">{w.found}</p>
+          <p dir="auto" className="line-clamp-3 text-[17px]">
+            {watch.found}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn btn-primary !min-h-11 !px-5"
+              onClick={() => {
+                const text = watch.found ?? "";
+                watch.dismiss();
+                onSubmit({ image: null, text, question: "" });
+              }}
+            >
+              {w.check}
+            </button>
+            <button type="button" className="btn btn-outline-light !min-h-11 !px-5" onClick={watch.dismiss}>
+              {w.dismiss}
+            </button>
+          </div>
+        </div>
+      )}
+
       <input
         ref={fileRef}
         type="file"
@@ -127,8 +162,8 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
           setDragging(false);
           pickFile(e.dataTransfer.files?.[0]);
         }}
-        className={`flex flex-col gap-3 rounded-2xl border-2 p-4 transition-colors ${
-          dragging ? "border-blue bg-tint" : "border-line bg-paper focus-within:border-blue"
+        className={`flex flex-col gap-3 rounded-2xl border-2 border-dashed p-4 transition-colors sm:p-5 ${
+          dragging ? "border-forest bg-forest-soft" : "border-mist bg-paper focus-within:border-forest focus-within:bg-white"
         }`}
       >
         {preview && (
@@ -139,7 +174,7 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
               type="button"
               onClick={removeImage}
               aria-label={u.removeImage}
-              className="absolute end-2 top-2 flex size-11 items-center justify-center rounded-full bg-ink text-white hover:bg-blue"
+              className="absolute end-2 top-2 flex size-11 items-center justify-center rounded-full bg-ink text-chalk hover:bg-forest"
             >
               <CloseIcon width={20} height={20} />
             </button>
@@ -160,7 +195,7 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
           dir="auto"
           aria-label={u.textLabel}
           placeholder={u.placeholder}
-          className="w-full resize-y bg-transparent p-1 outline-none placeholder:text-muted/80"
+          className="w-full resize-y bg-transparent p-1 text-[clamp(1.15rem,2.2vw,1.35rem)] outline-none placeholder:text-muted/80"
         />
 
         <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
@@ -173,12 +208,28 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
             {u.paste}
           </button>
           <MicButton value={text} onChange={setText} />
+          {watch.supported && (
+            <button
+              type="button"
+              onClick={watch.toggle}
+              aria-pressed={watch.status !== "off"}
+              className={`btn !min-h-11 !px-4 ${watch.status === "off" ? "btn-secondary" : "btn-live"}`}
+            >
+              <ClipboardIcon width={20} height={20} />
+              {w.toggle}
+            </button>
+          )}
           <span className="w-full text-[14px] text-muted sm:ms-2 sm:w-auto">{u.pasteHint}</span>
+          {watch.status !== "off" && (
+            <p role="status" className={`w-full text-[14px] ${watch.status === "denied" ? "font-semibold text-danger" : "text-muted"}`}>
+              {watch.status === "denied" ? w.denied : `${w.on} ${w.note}`}
+            </p>
+          )}
         </div>
       </div>
 
       {error && (
-        <p role="alert" className="rounded-xl border-2 border-warn bg-paper p-3 font-semibold">
+        <p role="alert" className="rounded-2xl border-[1.5px] border-warn bg-warn-soft p-3 font-semibold">
           {error}
         </p>
       )}
@@ -190,12 +241,12 @@ export default function Uploader({ onSubmit }: { onSubmit: (input: AnalyzeInput)
           dir="auto"
           aria-label={u.questionLabel}
           placeholder={u.questionPlaceholder}
-          className="min-h-14 min-w-0 flex-1 rounded-2xl border-2 border-line bg-paper px-4 outline-none placeholder:text-muted/80 focus:border-blue"
+          className="min-h-14 min-w-0 flex-1 rounded-full border-[1.5px] border-line bg-paper px-5 outline-none placeholder:text-muted/80 focus:border-forest"
         />
         <MicButton value={question} onChange={setQuestion} compact />
       </div>
 
-      <button type="submit" className="btn btn-primary w-full !min-h-14 text-[18px]" disabled={!canSubmit}>
+      <button type="submit" className="btn btn-primary w-full !min-h-16 text-[20px]" disabled={!canSubmit}>
         {u.submit}
       </button>
     </form>

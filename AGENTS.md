@@ -10,7 +10,7 @@ Read first: `docs/prd/PRD.md`, then this file. The PRD is the source of truth. I
 5. Only extracted text (links, phones, brand names) may go to web search. Never send the image anywhere except the configured Gemma endpoint.
 
 ## Stack
-- Backend: Python 3.11+, FastAPI, pydantic, `openai` SDK, `openai-agents` (verify step only), Pillow, `tavily-python`.
+- Backend: Python 3.11+, FastAPI, pydantic, `openai` SDK, `openai-agents` (verify step only), Pillow, `tavily-python`, `httpx` (Safe Browsing).
 - Frontend: Next.js (App Router, TypeScript), Tailwind, RTL Urdu.
 - No database. No auth.
 

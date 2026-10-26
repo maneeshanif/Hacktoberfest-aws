@@ -1,21 +1,22 @@
-"""EXTRACT -> VERIFY -> VERDICT.
+"""EXTRACT -> ADVERSARIAL VERIFY -> JUDGE.
 
-Call 1 (Gemma, image + text): extracts facts and gives a first verdict.
-VERIFY: local link checks always; Tavily / Agents SDK only when web_check is on.
-Call 2 (Gemma, text only) runs ONLY if web evidence was found, to fold it into the verdict.
+1. Prosecutor + Defense (run in parallel): one hunts for scam patterns and extracts the facts, the other for legitimacy.
+3. Verification: Local link checks & optional web searches.
+4. Judge Agent: Weighs all arguments and tool evidence to give a human-friendly verdict.
+
 Any failure returns `suspicious`, never `safe`.
 """
+import asyncio
 import json
 import logging
 import time
 
 from . import agent_verify, config, llm, prompts
 from .schemas import FALLBACK, FALLBACK_EN, RED_FLAGS, Evidence, Extracted, Result
-from .tools import domains, web_search
+from .tools import domains, safe_browsing, web_search
 
 log = logging.getLogger("hifazat")
-# Tavily results are context for the second Gemma call, not proof of a problem (a search always returns something).
-BAD_SOURCES = {"link_heuristics"}
+BAD_SOURCES = {"link_heuristics", "safe_browsing"}
 
 
 def _coerce(raw: dict) -> Result:
@@ -45,6 +46,10 @@ def safety_net(result: Result, evidence: list[Evidence], lang: str = "ur") -> Re
         result.red_flags.append("unofficial_link")
     if result.verdict == "safe" and (result.red_flags or bad):
         result.verdict = "suspicious"
+    if any(e.source == "safe_browsing" for e in evidence):  # known-bad link overrides everything
+        result.verdict = "scam"
+    if result.verdict == "scam" and not result.red_flags:
+        result.verdict = "suspicious"
     fallback = FALLBACK_EN if lang == "en" else FALLBACK
     if not result.explanation_ur or not result.what_to_do_ur:
         result.explanation_ur = result.explanation_ur or fallback.explanation_ur
@@ -57,13 +62,13 @@ def safety_net(result: Result, evidence: list[Evidence], lang: str = "ur") -> Re
 
 async def _verify(extracted: Extracted, text: str, web_check: bool) -> list[Evidence]:
     links = list(dict.fromkeys(extracted.links + domains.find_links(text)))[:5]
-    evidence = domains.check_links(links)
+    evidence = domains.check_links(links) + await safe_browsing.check(links)
     if not web_check:
         return evidence
     if config.USE_AGENT_VERIFY:
         try:
             return evidence + [e for e in await agent_verify.run(extracted, True) if e.source == "tavily"]
-        except Exception as e:  # Agents SDK trouble -> direct tool calls
+        except Exception as e:
             log.warning("agent verify failed, using direct tools: %s", e)
     terms = [domains.host_of(l) for l in links[:1]] + extracted.phones[:1] + [extracted.claimed_sender]
     return evidence + await web_search.scam_reports([t for t in terms if t])
@@ -75,28 +80,42 @@ async def analyze(image: bytes | None, text: str, question: str, web_check: bool
     web_check = web_check and config.ENABLE_WEB_CHECK
     try:
         image_url = llm.prep_image(image) if image else None
-        result = _coerce(await llm.ask_json(prompts.system(lang), prompts.user_text(text, question), image_url))
-        evidence = await _verify(result.extracted, text, web_check)
-        if any(e.source == "tavily" for e in evidence):
-            try:
-                second = _coerce(await llm.ask_json(
-                    prompts.system(lang, with_evidence=True),
-                    prompts.verdict_text(
-                        result.extracted.model_dump_json(),
-                        json.dumps([e.model_dump() for e in evidence], ensure_ascii=False),
-                        text, question,
-                    ),
-                    image_url,
-                ))
-                second.extracted = second.extracted if second.extracted.links or second.extracted.phones else result.extracted
-                result = second
-            except Exception as e:
-                log.warning("verdict re-check failed, keeping first verdict: %s", e)
+
+        # 1+2. PROSECUTOR (also extracts the facts) and DEFENSE argue independently
+        user = prompts.user_text(text, question)
+        prosecutor_raw, defense_raw = await asyncio.gather(
+            llm.ask_json(prompts.system(lang, role="prosecutor"), user, image_url),
+            llm.ask_json(prompts.system(lang, role="defense"), user, image_url),
+        )
+        extracted = _coerce(prosecutor_raw).extracted
+
+        # 3. VERIFY: tool-based evidence
+        evidence = await _verify(extracted, text, web_check)
+        evidence_json = json.dumps([e.model_dump() for e in evidence], ensure_ascii=False)
+
+        # 4. JUDGE: weigh both arguments and the tool evidence
+        judge_raw = await llm.ask_json(
+            prompts.system(lang, role="judge"),
+            prompts.judge_user_text(
+                json.dumps(prosecutor_raw, ensure_ascii=False),
+                json.dumps(defense_raw, ensure_ascii=False),
+                text,
+                evidence_json,
+            ),
+            image_url,
+        )
+
+        result = _coerce(judge_raw)
+        if not (result.extracted.links or result.extracted.phones):
+            result.extracted = extracted
         result.evidence = evidence
         result = safety_net(result, evidence, lang)
+
     except Exception as e:
         log.exception("analyze failed: %s", e)
         result = (FALLBACK_EN if lang == "en" else FALLBACK).model_copy(deep=True)
+
     result.mode = config.mode()
     result.latency_ms = int((time.perf_counter() - t0) * 1000)
     return result
+

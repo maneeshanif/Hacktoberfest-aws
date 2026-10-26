@@ -1,5 +1,6 @@
 """Gemma 4 access through the OpenAI-compatible endpoint set in .env. Gemma is the only model."""
 import base64
+import asyncio
 import io
 import json
 import re
@@ -22,34 +23,50 @@ def prep_image(raw: bytes) -> str:
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def first_json(text: str) -> dict:
-    """Pull the first JSON object out of a model reply (handles code fences and chatter)."""
-    text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip()
-    start = text.find("{")
-    if start < 0:
-        raise ValueError("no JSON object in model output")
-    depth, in_str, esc = 0, False, False
-    for i in range(start, len(text)):
-        c = text[i]
-        if in_str:
-            if esc:
-                esc = False
-            elif c == "\\":
-                esc = True
+def _objects(text: str):
+    """Yield every top-level {...} span in the text that parses as JSON."""
+    i = 0
+    while (start := text.find("{", i)) >= 0:
+        depth, in_str, esc = 0, False, False
+        for j in range(start, len(text)):
+            c = text[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif c == "\\":
+                    esc = True
+                elif c == '"':
+                    in_str = False
             elif c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
-        elif c == "{":
-            depth += 1
-        elif c == "}":
-            depth -= 1
-            if depth == 0:
-                return json.loads(text[start : i + 1])
-    raise ValueError("unterminated JSON object")
+                in_str = True
+            elif c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        yield json.loads(text[start : j + 1])
+                    except ValueError:
+                        pass
+                    i = j + 1
+                    break
+        else:
+            return
+        if depth != 0:
+            i = start + 1
 
 
-async def ask_json(system: str, user: str, image_url: str | None = None, attempts: int = 2) -> dict:
+def first_json(text: str) -> dict:
+    """Pull the answer JSON out of a model reply (handles code fences, chatter and Gemma's <thought> blocks)."""
+    text = re.sub(r"<thought>.*?</thought>", "", text, flags=re.S)
+    text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip()
+    found = [o for o in _objects(text) if isinstance(o, dict)]
+    if not found:
+        raise ValueError("no JSON object in model output")
+    return found[-1]  # the answer comes after any reasoning, so the last object wins
+
+
+async def ask_json(system: str, user: str, image_url: str | None = None, attempts: int = 3) -> dict:
     """One Gemma call that must return a JSON object. Image goes BEFORE text. Retries once."""
     content: list[dict] = []
     if image_url:
@@ -59,18 +76,20 @@ async def ask_json(system: str, user: str, image_url: str | None = None, attempt
     last: Exception | None = None
     # Gemma 4 "thinks" by default; on local Ollama that is ~10x slower (2 tok/s on CPU) and eats max_tokens.
     extra = {"extra_body": {"reasoning_effort": "none"}} if config.mode() == "local" else {}
-    for _ in range(attempts):
+    for i in range(attempts):
+        if i:
+            await asyncio.sleep(2 * i)  # hosted Gemma sometimes answers 503/429 under load
         try:
             try:
                 resp = await client.chat.completions.create(
-                    model=config.LLM_MODEL, messages=messages, temperature=0, max_tokens=1000,
+                    model=config.LLM_MODEL, messages=messages, temperature=0, max_tokens=config.LLM_MAX_TOKENS,
                     response_format={"type": "json_object"}, **extra,
                 )
             except Exception as e:  # some servers reject response_format
                 if "response_format" not in str(e).lower():
                     raise
                 resp = await client.chat.completions.create(
-                    model=config.LLM_MODEL, messages=messages, temperature=0, max_tokens=1000, **extra
+                    model=config.LLM_MODEL, messages=messages, temperature=0, max_tokens=config.LLM_MAX_TOKENS, **extra
                 )
             return first_json(resp.choices[0].message.content or "")
         except Exception as e:

@@ -7,9 +7,18 @@ English or large simple Urdu, whether it looks **safe, suspicious, or a scam**, 
 ![License: MIT](https://img.shields.io/badge/license-MIT-0E5A4D)
 
 ## How Gemma 4 is used
-Gemma 4 does all the analysis: it reads the screenshot (vision), extracts links, numbers and claims, and writes the verdict and explanation in Urdu.
-A small verification step runs local link checks (non-https, raw IP, URL shorteners, lookalike domains). Optionally, extracted text can be
-searched on the web (Tavily) and fed back to Gemma 4 for a second look.
+Gemma 4 does all the analysis, in three roles. A **prosecutor** reads the message (and screenshot, via vision), hunts for scam signs and extracts links,
+numbers and claims. A **defense** looks for reasons it could be genuine. A **judge** weighs both sides plus the link evidence and writes the verdict in
+Urdu or English. That is three Gemma 4 requests per check, the first two in parallel.
+
+Between the debate and the verdict, a verification step runs real checks on the links:
+- **Link heuristics (always on):** non-https, raw IP, URL shorteners, lookalike domains.
+- **Google Safe Browsing (optional):** Google's list of sites known for phishing and malware. A listed link forces a `scam` verdict. Set `SAFE_BROWSING_API_KEY`. Only the link text is sent.
+- **Web search (optional):** `ENABLE_WEB_CHECK=true` plus `TAVILY_API_KEY`. Only the link, number or sender name is searched.
+- **Agent mode (optional):** `USE_AGENT_VERIFY=true` lets Gemma 4 pick which tool to call (OpenAI Agents SDK, same Gemma endpoint). It runs together with web search.
+
+`GET /api/health` reports which of these are switched on, and the home page shows the same list, so the site never claims a check that is not running.
+A safety net in code means a message with red flags or bad link evidence can never come out as `safe`, and any failure returns `suspicious`.
 
 ## What it does
 - Paste (Ctrl+V), upload or drag a screenshot, paste text, or dictate it with the mic (English or Urdu)
@@ -20,10 +29,27 @@ searched on the web (Tavily) and fed back to Gemma 4 for a second look.
 - English by default with a one-tap switch to Urdu (right-to-left layout, larger text)
 
 ## Privacy
-- **Local mode (default):** Gemma 4 runs on your computer through Ollama. Your screenshot never leaves your device.
-- **Hosted mode (optional):** set a hosted Gemma 4 endpoint in `.env`. Then the screenshot goes to that provider.
-- **Web check (optional, off by default):** only extracted link/phone/brand text is searched, never the image.
+Nothing is stored: the backend keeps no database and writes no message to disk. Where a message travels depends on the mode.
+- **Local mode (default):** Gemma 4 runs on your computer through Ollama. Your text and screenshot never leave your device.
+- **Hosted mode:** if `LLM_BASE_URL` points to a hosted Gemma 4 (Google AI Studio, OpenRouter), your **text and screenshot are sent to that provider**, three requests per check, and are covered by that provider's terms. The site only shows its "private" badge in local mode. Do not call a hosted deployment private.
+- **Safe Browsing (optional, off without a key):** only the extracted link text goes to Google. Never the message or image.
+- **Web check (optional, off by default):** only a link, number or sender name is searched, never the image.
 - **Voice typing (optional):** uses your browser's speech recognition. In Chrome and Edge that audio may be processed by the browser maker's servers. Type, paste or use a screenshot for a fully on-device check.
+- **Clipboard watch (optional, off until you turn it on):** reads your clipboard while the page is open and only offers to check a new copy. Nothing is sent until you tap Check.
+- **Secrets:** API keys live in `.env`, which is gitignored. Never paste them into chat or commit them.
+
+## Checking messages automatically
+A website cannot read your SMS or WhatsApp, because phones do not allow it. Three ways get close:
+1. **Share to Hifazat (Android):** install the PWA, then share any message to it.
+2. **Clipboard watch:** turn on "Watch my clipboard" in the checker. Copy a message and Hifazat offers to check it.
+3. **Every new SMS (advanced):** set `LISTEN_TOKEN` in `.env`, then have an automation app (Tasker, MacroDroid, iOS Shortcuts) POST each new SMS to your server and show the verdict as a notification:
+```
+POST /api/listen
+X-Listen-Token: <your LISTEN_TOKEN>
+{"text": "<sms body>", "sender": "<sender>", "lang": "en"}
+-> {"verdict": "scam", "red_flags": [...], "summary": "...", "what_to_do": "..."}
+```
+The endpoint is disabled (404) unless `LISTEN_TOKEN` is set, and it needs a server your phone can reach. In hosted mode every SMS forwarded this way goes to the hosted provider.
 
 ## Quick start (Windows)
 ```

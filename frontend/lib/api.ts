@@ -38,10 +38,18 @@ export interface AnalyzeResult {
   latency_ms: number;
 }
 
+export interface Checks {
+  safe_browsing: boolean;
+  web_search: boolean;
+  agents: boolean;
+  listener: boolean;
+}
+
 export interface Health {
   ok: boolean;
   mode: "local" | "hosted";
   model: string;
+  checks?: Checks;
 }
 
 export type Lang = "en" | "ur";
@@ -64,8 +72,8 @@ export class ApiError extends Error {
 }
 
 export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
-export const TIMEOUT_MS = 60_000;
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+export const TIMEOUT_MS = 180_000; // hosted Gemma 4 thinks first and can take a minute or two
 
 // ---------- Mock results (example data, used in mock mode and by demo keys D+1/2/3) ----------
 
@@ -199,7 +207,9 @@ async function request(path: string, init: RequestInit, timeoutMs = TIMEOUT_MS):
 }
 
 export async function getHealth(): Promise<Health> {
-  if (USE_MOCK) return { ok: true, mode: "local", model: "gemma4:e4b (mock)" };
+  if (USE_MOCK) {
+    return { ok: true, mode: "local", model: "gemma4:e4b (mock)", checks: { safe_browsing: false, web_search: false, agents: false, listener: false } };
+  }
   const res = await request("/api/health", { method: "GET" }, 5_000);
   return (await res.json()) as Health;
 }

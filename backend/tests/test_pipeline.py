@@ -93,7 +93,7 @@ def test_api(monkeypatch):
     assert r.status_code == 200
 
 
-async def test_web_check_flow_uses_second_call(monkeypatch):
+async def test_web_check_flow_feeds_judge(monkeypatch):
     fake = patch(monkeypatch, SCAM)
     monkeypatch.setattr(config, "ENABLE_WEB_CHECK", True)
 
@@ -101,5 +101,61 @@ async def test_web_check_flow_uses_second_call(monkeypatch):
         return [Evidence(claim="web result: scam report", source="tavily", detail="https://x")]
     monkeypatch.setattr(pipeline.web_search, "scam_reports", fake_reports)
     res = await pipeline.analyze(None, "see http://hbl-secure-login.example", "", True)
-    assert len(fake.calls) == 2
+    assert len(fake.calls) == 3  # prosecutor, defense, judge
     assert any(e.source == "tavily" for e in res.evidence)
+
+
+def test_safety_net_scam_needs_a_red_flag():
+    r = Result(verdict="scam", explanation_ur="x", what_to_do_ur="y")
+    assert pipeline.safety_net(r, []).verdict == "suspicious"
+
+
+async def test_safe_browsing_hit_forces_scam(monkeypatch):
+    patch(monkeypatch, {**SCAM, "verdict": "suspicious"})
+
+    async def fake_check(links):
+        return [Evidence(claim="Google Safe Browsing lists this link as social engineering", source="safe_browsing")]
+    monkeypatch.setattr(pipeline.safe_browsing, "check", fake_check)
+    res = await pipeline.analyze(None, "see http://hbl-secure-login.example", "", False)
+    assert res.verdict == "scam"
+
+
+def test_first_json_skips_thoughts_and_takes_the_answer():
+    reply = '<thought>try {"verdict": "safe"} first... no, braces { here</thought>\nHere you go:\n```json\n{"verdict": "scam", "red_flags": []}\n```'
+    assert llm.first_json(reply) == {"verdict": "scam", "red_flags": []}
+    assert llm.first_json('<thought>unclosed {"a": 1}') == {"a": 1}
+    with pytest.raises(ValueError):
+        llm.first_json("no json here")
+
+
+def test_listen_disabled_without_token(monkeypatch):
+    monkeypatch.setattr(config, "LISTEN_TOKEN", "")
+    r = TestClient(app).post("/api/listen", json={"text": "hello"}, headers={"X-Listen-Token": "x"})
+    assert r.status_code == 404
+
+
+def test_listen_rejects_bad_token_and_accepts_good(monkeypatch):
+    monkeypatch.setattr(config, "LISTEN_TOKEN", "s3cret")
+    patch(monkeypatch, SCAM)
+    c = TestClient(app)
+    assert c.post("/api/listen", json={"text": "hi"}, headers={"X-Listen-Token": "nope"}).status_code == 401
+    assert c.post("/api/listen", json={"text": "hi"}).status_code == 401
+    ok = c.post("/api/listen", json={"text": "send OTP now", "sender": "HBL"}, headers={"X-Listen-Token": "s3cret"})
+    assert ok.status_code == 200
+    body = ok.json()
+    assert body["verdict"] == "scam" and "asks_otp_pin_cnic_card" in body["red_flags"]
+
+
+def test_health_reports_active_checks(monkeypatch):
+    monkeypatch.setattr(config, "SAFE_BROWSING_API_KEY", "")
+    monkeypatch.setattr(config, "LISTEN_TOKEN", "")
+    checks = TestClient(app).get("/api/health").json()["checks"]
+    assert checks == {"safe_browsing": False, "web_search": False, "agents": config.USE_AGENT_VERIFY, "listener": False}
+
+
+def test_english_prompt_does_not_ask_for_urdu():
+    from app import prompts
+
+    en, ur = prompts.system("en"), prompts.system("ur")
+    assert "short Urdu (script" not in en and "short English" in en
+    assert "short Urdu (script" in ur

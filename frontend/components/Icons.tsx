@@ -101,3 +101,26 @@ export const StopSquareIcon = (p: IconProps) => (
     <rect x="6" y="6" width="12" height="12" rx="2.5" />
   </Svg>
 );
+
+export const MenuIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Svg>
+);
+
+
+export const PhoneIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+    <path d="M11 18.5h2" />
+  </Svg>
+);
+
+export const LinkIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+    <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+  </Svg>
+);
+
+

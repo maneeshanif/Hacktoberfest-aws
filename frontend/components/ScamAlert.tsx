@@ -46,15 +46,15 @@ export default function ScamAlert({ explanation, onDismiss }: { explanation: str
       aria-describedby="scam-alert-desc"
       className="on-dark fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 overflow-y-auto bg-danger p-6 text-center text-white"
     >
-      <StopIcon width={88} height={88} />
-      <h2 id="scam-alert-title" className="max-w-4xl text-[clamp(2rem,6vw,3.5rem)]">
+      <StopIcon width={96} height={96} />
+      <h2 id="scam-alert-title" className="max-w-4xl text-[clamp(2.2rem,6.5vw,4.2rem)]">
         {t.alert.title}
       </h2>
-      <p id="scam-alert-desc" className="max-w-3xl text-[clamp(1.2rem,2.5vw,1.6rem)] leading-relaxed">
+      <p id="scam-alert-desc" className="max-w-3xl text-[clamp(1.3rem,2.6vw,1.75rem)] font-medium leading-relaxed">
         {explanation}
       </p>
       <div className="flex flex-wrap justify-center gap-4">
-        <button ref={dismissRef} type="button" onClick={onDismiss} className="btn min-h-16 min-w-56 bg-white text-[22px] text-ink hover:bg-tint">
+        <button ref={dismissRef} type="button" onClick={onDismiss} className="btn min-h-16 min-w-56 !border-chalk bg-chalk text-[22px] text-ink hover:bg-white">
           {t.alert.dismiss}
         </button>
         {available && (
